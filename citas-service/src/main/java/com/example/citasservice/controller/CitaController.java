@@ -1,9 +1,14 @@
 package com.example.citasservice.controller;
 
-import com.example.citasservice.dto.PacienteDTO;
 import com.example.citasservice.model.Cita;
 import com.example.citasservice.service.CitaService;
 import com.example.citasservice.service.PacienteClientService;
+import com.example.citasservice.dto.PacienteDTO;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +18,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/citas")
-@CrossOrigin(origins = "*")
+@Tag(name = "Módulo de Citas Médicas", description = "Endpoints para la gestión de citas médicas")
 public class CitaController {
 
     private final CitaService citaService;
@@ -24,45 +29,28 @@ public class CitaController {
         this.pacienteClientService = pacienteClientService;
     }
 
-    // ── CRUD ───────────────────────────────────────────────────────────────
-
+    @Operation(summary = "Obtener todas las citas", description = "Retorna el listado completo de citas registradas.")
     @GetMapping
     public List<Cita> obtenerTodas() {
         return citaService.obtenerTodas();
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Cita> obtenerPorId(@PathVariable Long id) {
-        return citaService.obtenerPorId(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
-
+    @Operation(summary = "Crear una nueva cita", description = "Registra una nueva cita médica asociando un paciente y médico.")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Cita creada exitosamente"),
+        @ApiResponse(responseCode = "400", description = "Datos de entrada inválidos")
+    })
     @PostMapping
-    public Cita crear(@RequestBody Cita cita) {
-        return citaService.guardar(cita);
+    public Cita crearCita(@RequestBody Cita cita) {
+        return citaService.crearCita(cita);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Cita> actualizar(@PathVariable Long id, @RequestBody Cita cita) {
-        if (citaService.obtenerPorId(id).isEmpty()) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(citaService.actualizar(id, cita));
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminar(@PathVariable Long id) {
-        return citaService.eliminar(id)
-                ? ResponseEntity.noContent().build()
-                : ResponseEntity.notFound().build();
-    }
-
-    // ── REPORTES ───────────────────────────────────────────────────────────
-
-    /** Reporte: todas las citas de un paciente (también consulta sus datos al saludplus-service) */
+    @Operation(summary = "Reporte de citas por Paciente", 
+               description = "Consulta las citas locales e integra datos del paciente consumiendo el servicio externo mediante JWT.")
     @GetMapping("/reporte/paciente/{pacienteId}")
     public ResponseEntity<?> citasPorPaciente(
-            @PathVariable Long pacienteId,
-            @RequestHeader(value = "Authorization", required = false) String authorization
+            @Parameter(description = "ID del paciente a consultar", example = "1") @PathVariable Long pacienteId,
+            @Parameter(description = "Token de autorización Bearer") @RequestHeader(value = "Authorization", required = false) String authorization
     ) {
         List<Cita> citas = citaService.obtenerPorPaciente(pacienteId);
         if (authorization != null) {
@@ -73,20 +61,21 @@ public class CitaController {
         return ResponseEntity.ok(citas);
     }
 
-    /** Reporte: citas filtradas por fecha */
+    @Operation(summary = "Reporte de citas por fecha", description = "Filtra las citas agendadas para un día específico.")
     @GetMapping("/reporte/fecha/{fecha}")
     public List<Cita> citasPorFecha(
+            @Parameter(description = "Fecha en formato YYYY-MM-DD", example = "2026-06-25")
             @PathVariable @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate fecha
     ) {
         return citaService.obtenerPorFecha(fecha);
     }
 
-    /** Reporte: citas atendidas por un médico */
+    @Operation(summary = "Reporte de citas por Médico", description = "Filtra las citas correspondientes al nombre de un médico.")
     @GetMapping("/reporte/medico/{medicoNombre}")
-    public List<Cita> citasPorMedico(@PathVariable String medicoNombre) {
+    public List<Cita> citasPorMedico(
+            @Parameter(description = "Nombre del médico", example = "Dr. House") @PathVariable String medicoNombre) {
         return citaService.obtenerPorMedico(medicoNombre);
     }
 
-    // Inner record para reporte combinado paciente + citas
     record ReportePaciente(PacienteDTO paciente, List<Cita> citas) {}
-}
+}
