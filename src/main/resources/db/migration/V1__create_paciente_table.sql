@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS paciente (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    rut VARCHAR(20) NOT NULL UNIQUE,
+    nombre VARCHAR(100) NOT NULL,
+    edad INT,
+    telefono VARCHAR(20)
+);
