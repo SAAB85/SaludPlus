@@ -1,33 +1,30 @@
-# 🏥 SaludPlus — API REST de Gestión Hospitalaria
+# 🏥 SaludPlus — Sistema de Gestión Clínica con Microservicios
 
-Sistema backend desarrollado con **Spring Boot** para la gestión de pacientes, médicos, atenciones y fichas clínicas en un entorno hospitalario. Incluye autenticación JWT, documentación Swagger y migraciones de base de datos con Flyway.
+Sistema backend desarrollado con **Spring Boot** para la gestión de una clínica médica, migrado desde una arquitectura monolítica a una arquitectura distribuida basada en **microservicios independientes**.
 
 ---
 
-## 📋 Tabla de Contenidos
+## 👥 Integrantes del Equipo
 
-- [Descripción](#descripción)
-- [Tecnologías](#tecnologías)
-- [Arquitectura](#arquitectura)
-- [Estructura del Proyecto](#estructura-del-proyecto)
-- [Endpoints de la API](#endpoints-de-la-api)
-- [Configuración y Ejecución](#configuración-y-ejecución)
-- [Migraciones de Base de Datos](#migraciones-de-base-de-datos)
-- [Documentación Swagger](#documentación-swagger)
-- [Seguridad](#seguridad)
+| Nombre | Rol |
+|--------|-----|
+| Sebastián Antipán | Desarrollador Full Stack / Arquitecto |
 
 ---
 
 ## 📌 Descripción
 
-**SaludPlus** es una API RESTful que permite administrar los principales recursos de un sistema hospitalario:
+**SaludPlus** es una API RESTful distribuida que permite administrar los principales recursos de un sistema clínico mediante microservicios independientes:
 
 - Registro y gestión de **pacientes**
 - Gestión de **médicos**
+- Reserva y cancelación de **citas médicas**
 - Registro de **atenciones médicas**
-- Administración de **fichas de pacientes**
-- Control de acceso mediante autenticación **JWT**
-- API versionada (v1 y v2 con soporte **HATEOAS**)
+- Administración de **fichas clínicas**
+- Gestión de **pagos**
+- Control de **farmacia y medicamentos**
+- Sistema de **notificaciones**
+- **API Gateway** como punto de entrada unificado
 
 ---
 
@@ -41,99 +38,69 @@ Sistema backend desarrollado con **Spring Boot** para la gestión de pacientes, 
 | Spring Data JPA | — |
 | Spring Security | — |
 | Spring HATEOAS | — |
+| Spring Cloud Gateway | — |
 | MySQL Connector | — |
 | Flyway | — |
 | Lombok | — |
 | Bean Validation | — |
 | JJWT (JWT) | 0.11.5 |
 | SpringDoc OpenAPI (Swagger) | 2.6.0 |
-| DataFaker | 2.3.0 |
 
 ---
 
-## 🏗️ Arquitectura
-
-El proyecto sigue una arquitectura en capas estándar de Spring Boot:
+## 🏗️ Arquitectura de Microservicios
 
 ```
-┌─────────────────────────────────────┐
-│           Controller Layer          │  ← REST Controllers (v1 y v2)
-├─────────────────────────────────────┤
-│            Service Layer            │  ← Lógica de negocio
-├─────────────────────────────────────┤
-│          Repository Layer           │  ← Spring Data JPA
-├─────────────────────────────────────┤
-│             Model Layer             │  ← Entidades JPA
-├─────────────────────────────────────┤
-│          Security Layer             │  ← JWT + Spring Security
-├─────────────────────────────────────┤
-│        Base de Datos MySQL          │  ← Migraciones con Flyway
-└─────────────────────────────────────┘
+                    ┌─────────────────────┐
+                    │   API Gateway        │
+                    │   Puerto: 8080       │
+                    └──────────┬──────────┘
+                               │
+        ┌──────────────────────┼──────────────────────┐
+        │                      │                      │
+┌───────▼──────┐    ┌──────────▼──────┐   ┌──────────▼──────┐
+│  pacientes   │    │    medicos      │   │     citas       │
+│  Puerto:8081 │    │  Puerto: 8082   │   │  Puerto: 8083   │
+│ db_pacientes │    │   db_medicos    │   │    db_citas     │
+└──────────────┘    └─────────────────┘   └─────────────────┘
+        │                      │                      │
+┌───────▼──────┐    ┌──────────▼──────┐   ┌──────────▼──────┐
+│  atenciones  │    │     fichas      │   │     pagos       │
+│  Puerto:8084 │    │  Puerto: 8085   │   │  Puerto: 8086   │
+│db_atenciones │    │   db_fichas     │   │    db_pagos     │
+└──────────────┘    └─────────────────┘   └─────────────────┘
+        │                      │
+┌───────▼──────┐    ┌──────────▼──────┐
+│   farmacia   │    │ notificaciones  │
+│  Puerto:8087 │    │  Puerto: 8088   │
+│  db_farmacia │    │db_notificaciones│
+└──────────────┘    └─────────────────┘
 ```
+
+Cada microservicio sigue el patrón **CSR (Controller → Service → Repository)** con su propia base de datos MySQL independiente.
 
 ---
 
-## 📁 Estructura del Proyecto
+## 📦 Microservicios Implementados
 
-```
-saludplus/
-├── src/
-│   └── main/
-│       ├── java/com/ejemplo/saludplus/
-│       │   ├── assembler/          # HATEOAS assemblers
-│       │   ├── config/             # Configuración de la app
-│       │   ├── controller/         # Controladores REST (v1 y v2)
-│       │   │   ├── AuthController.java
-│       │   │   ├── PacienteController.java
-│       │   │   ├── PacienteControllerV2.java
-│       │   │   ├── MedicoController.java
-│       │   │   ├── MedicoControllerV2.java
-│       │   │   ├── AtencionController.java
-│       │   │   ├── AtencionControllerV2.java
-│       │   │   ├── FichaPacienteController.java
-│       │   │   └── FichaPacienteControllerV2.java
-│       │   ├── dto/                # Data Transfer Objects
-│       │   ├── model/              # Entidades JPA
-│       │   │   ├── Paciente.java
-│       │   │   ├── Medico.java
-│       │   │   ├── Atencion.java
-│       │   │   ├── FichaPaciente.java
-│       │   │   ├── User.java
-│       │   │   ├── TipoUsuario.java
-│       │   │   └── Role.java
-│       │   ├── repository/         # Interfaces JPA Repository
-│       │   ├── security/           # JWT + Spring Security
-│       │   │   ├── JwtService.java
-│       │   │   ├── JwtFilter.java
-│       │   │   └── CustomUserDetailsService.java
-│       │   ├── service/            # Servicios de negocio
-│       │   ├── DataLoader.java     # Carga de datos iniciales
-│       │   └── SaludplusApplication.java
-│       └── resources/
-│           ├── application.properties
-│           └── db/migration/       # Scripts SQL Flyway
-│               ├── V1__create_paciente_table.sql
-│               ├── V2__create_usuario_table.sql
-│               ├── V3__create_tipo_usuario_table.sql
-│               ├── V4__create_medico_table.sql
-│               ├── V5__alter_paciente_add_tipo_usuario.sql
-│               ├── V6__create_atencion_table.sql
-│               └── V7__create_ficha_paciente_table.sql
-└── pom.xml
-```
+| # | Microservicio | Puerto | Base de Datos | Swagger |
+|---|--------------|--------|---------------|---------|
+| 1 | gateway-service | 8080 | — | — |
+| 2 | pacientes-service | 8081 | db_pacientes | http://localhost:8081/swagger-ui.html |
+| 3 | medicos-service | 8082 | db_medicos | http://localhost:8082/swagger-ui.html |
+| 4 | citas-service | 8083 | db_citas | http://localhost:8083/swagger-ui.html |
+| 5 | atenciones-service | 8084 | db_atenciones | http://localhost:8084/swagger-ui.html |
+| 6 | fichas-service | 8085 | db_fichas | http://localhost:8085/swagger-ui.html |
+| 7 | pagos-service | 8086 | db_pagos | http://localhost:8086/swagger-ui.html |
+| 8 | farmacia-service | 8087 | db_farmacia | http://localhost:8087/swagger-ui.html |
+| 9 | notificaciones-service | 8088 | db_notificaciones | http://localhost:8088/swagger-ui.html |
+| 10 | saludplus (monolito base) | — | db_hospital_vm | — |
 
 ---
 
-## 🔌 Endpoints de la API
+## 🔌 Endpoints Principales por Microservicio
 
-### 🔐 Autenticación
-
-| Método | Endpoint | Descripción |
-|--------|----------|-------------|
-| `POST` | `/auth/login` | Iniciar sesión y obtener token JWT |
-
-### 👥 Pacientes
-
+### 👥 Pacientes (8081)
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `GET` | `/api/pacientes` | Listar todos los pacientes |
@@ -142,8 +109,7 @@ saludplus/
 | `PUT` | `/api/pacientes/{id}` | Actualizar paciente |
 | `DELETE` | `/api/pacientes/{id}` | Eliminar paciente |
 
-### 🩺 Médicos
-
+### 🩺 Médicos (8082)
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `GET` | `/api/medicos` | Listar todos los médicos |
@@ -152,8 +118,16 @@ saludplus/
 | `PUT` | `/api/medicos/{id}` | Actualizar médico |
 | `DELETE` | `/api/medicos/{id}` | Eliminar médico |
 
-### 📋 Atenciones
+### 📅 Citas (8083)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/citas` | Listar todas las citas |
+| `GET` | `/api/citas/{id}` | Obtener cita por ID |
+| `POST` | `/api/citas` | Reservar nueva cita |
+| `PUT` | `/api/citas/{id}` | Actualizar cita |
+| `DELETE` | `/api/citas/{id}` | Cancelar cita |
 
+### 📋 Atenciones (8084)
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `GET` | `/api/atenciones` | Listar todas las atenciones |
@@ -162,8 +136,7 @@ saludplus/
 | `PUT` | `/api/atenciones/{id}` | Actualizar atención |
 | `DELETE` | `/api/atenciones/{id}` | Eliminar atención |
 
-### 📁 Fichas de Paciente
-
+### 📁 Fichas (8085)
 | Método | Endpoint | Descripción |
 |--------|----------|-------------|
 | `GET` | `/api/fichas` | Listar fichas |
@@ -172,83 +145,134 @@ saludplus/
 | `PUT` | `/api/fichas/{id}` | Actualizar ficha |
 | `DELETE` | `/api/fichas/{id}` | Eliminar ficha |
 
-> 💡 Los endpoints v2 (`/api/v2/...`) incluyen soporte **HATEOAS** con enlaces hipermedia.
+### 💰 Pagos (8086)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/pagos` | Listar todos los pagos |
+| `GET` | `/api/pagos/{id}` | Obtener pago por ID |
+| `POST` | `/api/pagos` | Registrar nuevo pago |
+| `PUT` | `/api/pagos/{id}` | Actualizar pago |
+| `DELETE` | `/api/pagos/{id}` | Eliminar pago |
+
+### 💊 Farmacia (8087)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/farmacia` | Listar medicamentos |
+| `GET` | `/api/farmacia/{id}` | Obtener medicamento por ID |
+| `POST` | `/api/farmacia` | Agregar medicamento |
+| `PUT` | `/api/farmacia/{id}` | Actualizar medicamento |
+| `DELETE` | `/api/farmacia/{id}` | Eliminar medicamento |
+
+### 🔔 Notificaciones (8088)
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| `GET` | `/api/notificaciones` | Listar notificaciones |
+| `GET` | `/api/notificaciones/{id}` | Obtener notificación por ID |
+| `POST` | `/api/notificaciones` | Crear notificación |
+| `PUT` | `/api/notificaciones/{id}` | Actualizar notificación |
+| `DELETE` | `/api/notificaciones/{id}` | Eliminar notificación |
 
 ---
 
-## ⚙️ Configuración y Ejecución
+## ⚙️ Configuración y Ejecución Local
 
 ### Prerrequisitos
-
 - Java 17+
 - Maven 3.8+
-- MySQL 8+
+- MySQL 8+ (Laragon recomendado)
 
 ### 1. Clonar el repositorio
-
 ```bash
-git clone https://github.com/tu-usuario/saludplus.git
-cd saludplus
+git clone https://github.com/SAAB85/SaludPlus.git
+cd SaludPlus
 ```
 
-### 2. Configurar la base de datos
-
-Crea la base de datos en MySQL:
-
+### 2. Crear las bases de datos en MySQL
 ```sql
-CREATE DATABASE db_hospital_vm;
+CREATE DATABASE IF NOT EXISTS db_hospital_vm;
+CREATE DATABASE IF NOT EXISTS db_pacientes;
+CREATE DATABASE IF NOT EXISTS db_medicos;
+CREATE DATABASE IF NOT EXISTS db_citas;
+CREATE DATABASE IF NOT EXISTS db_atenciones;
+CREATE DATABASE IF NOT EXISTS db_fichas;
+CREATE DATABASE IF NOT EXISTS db_pagos;
+CREATE DATABASE IF NOT EXISTS db_farmacia;
+CREATE DATABASE IF NOT EXISTS db_notificaciones;
 ```
 
-### 3. Configurar `application.properties`
-
-Edita el archivo `src/main/resources/application.properties` con tus credenciales:
-
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/db_hospital_vm
-spring.datasource.username=root
-spring.datasource.password=TU_CONTRASEÑA
-```
-
-### 4. Ejecutar la aplicación
+### 3. Ejecutar cada microservicio
+Abrir una terminal por cada microservicio y ejecutar:
 
 ```bash
+# Terminal 1 - Pacientes
+cd pacientes-service
+./mvnw spring-boot:run
+
+# Terminal 2 - Médicos
+cd medicos-service
+./mvnw spring-boot:run
+
+# Terminal 3 - Citas
+cd citas-service
+./mvnw spring-boot:run
+
+# Terminal 4 - Atenciones
+cd atenciones-service
+./mvnw spring-boot:run
+
+# Terminal 5 - Fichas
+cd fichas-service
+./mvnw spring-boot:run
+
+# Terminal 6 - Pagos
+cd pagos-service
+./mvnw spring-boot:run
+
+# Terminal 7 - Farmacia
+cd farmacia-service
+./mvnw spring-boot:run
+
+# Terminal 8 - Notificaciones
+cd notificaciones-service
+./mvnw spring-boot:run
+
+# Terminal 9 - Gateway
+cd gateway-service
 ./mvnw spring-boot:run
 ```
-
-O con Maven instalado:
-
-```bash
-mvn spring-boot:run
-```
-
-La aplicación estará disponible en: `http://localhost:8080`
 
 ---
 
 ## 🗄️ Migraciones de Base de Datos
 
-El proyecto utiliza **Flyway** para gestionar el esquema de la base de datos de forma automática. Las migraciones se ejecutan al iniciar la aplicación.
+El proyecto base utiliza **Flyway** para gestionar el esquema automáticamente.
 
 | Versión | Script | Descripción |
 |---------|--------|-------------|
 | V1 | `V1__create_paciente_table.sql` | Tabla de pacientes |
 | V2 | `V2__create_usuario_table.sql` | Tabla de usuarios |
-| V3 | `V3__create_tipo_usuario_table.sql` | Tabla de tipos de usuario |
+| V3 | `V3__create_tipo_usuario_table.sql` | Tipos de usuario |
 | V4 | `V4__create_medico_table.sql` | Tabla de médicos |
-| V5 | `V5__alter_paciente_add_tipo_usuario.sql` | Relación paciente-tipo usuario |
+| V5 | `V5__alter_paciente_add_tipo_usuario.sql` | Relación paciente-tipo |
 | V6 | `V6__create_atencion_table.sql` | Tabla de atenciones |
-| V7 | `V7__create_ficha_paciente_table.sql` | Tabla de fichas de paciente |
+| V7 | `V7__create_ficha_paciente_table.sql` | Fichas de paciente |
 
 ---
 
 ## 📖 Documentación Swagger
 
-Una vez ejecutada la aplicación, accede a la documentación interactiva de la API:
+Cada microservicio expone su propia documentación Swagger:
 
-| Recurso | URL |
-|---------|-----|
-| Swagger UI | `http://localhost:8080/doc/swagger-ui.html` |
-| OpenAPI JSON | `http://localhost:8080/v3/api-docs` |
+| Microservicio | URL Swagger |
+|--------------|-------------|
+| Pacientes | http://localhost:8081/swagger-ui.html |
+| Médicos | http://localhost:8082/swagger-ui.html |
+| Citas | http://localhost:8083/swagger-ui.html |
+| Atenciones | http://localhost:8084/swagger-ui.html |
+| Fichas | http://localhost:8085/swagger-ui.html |
+| Pagos | http://localhost:8086/swagger-ui.html |
+| Farmacia | http://localhost:8087/swagger-ui.html |
+| Notificaciones | http://localhost:8088/swagger-ui.html |
 
 ---
 
@@ -258,26 +282,13 @@ La API implementa autenticación basada en **JSON Web Tokens (JWT)**:
 
 1. El cliente realiza `POST /auth/login` con sus credenciales
 2. El servidor devuelve un token JWT
-3. El cliente incluye el token en el header de cada petición:
-   ```
-   Authorization: Bearer <token>
-   ```
-
-### Roles disponibles
-
-| Rol | Acceso |
-|-----|--------|
-| `ADMIN` | Acceso completo |
-| `USER` | Acceso de lectura / operaciones básicas |
-
----
-
-## 👨‍💻 Autor
-
-Desarrollado como proyecto universitario de gestión hospitalaria con arquitectura RESTful y buenas prácticas de Spring Boot.
+3. El cliente incluye el token en cada petición:
+```
+Authorization: Bearer <token>
+```
 
 ---
 
 ## 📄 Licencia
 
-Este proyecto es de uso académico y educativo.
+Proyecto académico universitario — DUOC UC, Ingeniería en Informática.
