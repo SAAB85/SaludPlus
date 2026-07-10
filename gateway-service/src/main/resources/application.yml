@@ -1,51 +1,6 @@
 spring:
   application:
     name: gateway-service
-  autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration
-      - org.springframework.cloud.autoconfigure.LifecycleMvcEndpointAutoConfiguration
-  cloud:
-    gateway:
-      routes:
-        - id: pacientes-service
-          uri: http://localhost:8081
-          predicates:
-            - Path=/api/pacientes/**
-        - id: medicos-service
-          uri: http://localhost:8082
-          predicates:
-            - Path=/api/medicos/**
-        - id: citas-service
-          uri: http://localhost:8083
-          predicates:
-            - Path=/api/citas/**
-        - id: atenciones-service
-          uri: http://localhost:8084
-          predicates:
-            - Path=/api/atenciones/**
-        - id: fichas-service
-          uri: http://localhost:8085
-          predicates:
-            - Path=/api/fichas/**
-        - id: pagos-service
-          uri: http://localhost:8086
-          predicates:
-            - Path=/api/pagos/**
-        - id: farmacia-service
-          uri: http://localhost:8087
-          predicates:
-            - Path=/api/farmacia/**
-        - id: notificaciones-service
-          uri: http://localhost:8088
-          predicates:
-            - Path=/api/notificaciones/**
 
 server:
   port: 8080
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,gateway
