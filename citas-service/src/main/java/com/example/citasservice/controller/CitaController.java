@@ -42,7 +42,7 @@ public class CitaController {
     })
     @PostMapping
     public Cita crearCita(@RequestBody Cita cita) {
-        return citaService.crearCita(cita);
+        return citaService.guardar(cita);
     }
 
     @Operation(summary = "Reporte de citas por Paciente", 
